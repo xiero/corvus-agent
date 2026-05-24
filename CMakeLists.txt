@@ -14,6 +14,7 @@ include(CTest)
 
 add_library(corvus_core
   src/core/AgentConfig.cpp
+  src/commands/CommandParser.cpp
 )
 
 target_include_directories(corvus_core
@@ -45,21 +46,39 @@ target_compile_options(corvus
 )
 
 if(BUILD_TESTING)
-  add_executable(corvus_tests
+  add_executable(corvus_agent_config_tests
     tests/AgentConfigTests.cpp
   )
 
-  target_link_libraries(corvus_tests
+  target_link_libraries(corvus_agent_config_tests
     PRIVATE
       corvus_core
   )
 
-  target_compile_options(corvus_tests
+  target_compile_options(corvus_agent_config_tests
     PRIVATE
       -Wall
       -Wextra
       -Wpedantic
   )
 
-  add_test(NAME AgentConfigTests COMMAND corvus_tests)
+  add_test(NAME AgentConfigTests COMMAND corvus_agent_config_tests)
+
+  add_executable(corvus_command_parser_tests
+    tests/CommandParserTests.cpp
+  )
+
+  target_link_libraries(corvus_command_parser_tests
+    PRIVATE
+      corvus_core
+  )
+
+  target_compile_options(corvus_command_parser_tests
+    PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+  )
+
+  add_test(NAME CommandParserTests COMMAND corvus_command_parser_tests)
 endif()
