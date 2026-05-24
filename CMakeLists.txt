@@ -11,6 +11,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
+include(FetchContent)
+
+set(FTXUI_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(FTXUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(FTXUI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(ftxui
+  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
+  GIT_TAG v6.1.9
+)
+
+FetchContent_MakeAvailable(ftxui)
 
 add_library(corvus_core
   src/core/AgentConfig.cpp
@@ -29,6 +41,31 @@ target_compile_options(corvus_core
     -Wpedantic
 )
 
+add_library(corvus_tui
+  src/tui/TuiApp.cpp
+)
+
+target_include_directories(corvus_tui
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(corvus_tui
+  PUBLIC
+    corvus_core
+  PRIVATE
+    ftxui::screen
+    ftxui::dom
+    ftxui::component
+)
+
+target_compile_options(corvus_tui
+  PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
 add_executable(corvus
   app/main.cpp
 )
@@ -36,6 +73,7 @@ add_executable(corvus
 target_link_libraries(corvus
   PRIVATE
     corvus_core
+    corvus_tui
 )
 
 target_compile_options(corvus
