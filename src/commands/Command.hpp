@@ -4,20 +4,37 @@
 #include <variant>
 
 namespace corvus::commands {
-    struct HelpCommand{};
-    struct ExitCommand{};
-    struct VersionCommand{};
-    struct ConfigCommand{};
 
-    struct UnknownCommand {
-        std::string input;
-    };
+struct HelpCommand {};
+struct ExitCommand {};
+struct VersionCommand {};
+struct ConfigCommand {};
+struct StateCommand {};
 
-    using Command = std::variant <
-        HelpCommand,
-        ExitCommand,
-        VersionCommand,
-        ConfigCommand,
-        UnknownCommand
-    >;
-} // namsespace corvus::commands
+struct PlanCommand {};
+struct ToolCommand {};
+struct ValidateCommand {};
+struct FinishCommand {};
+struct ResetCommand {};
+struct FailCommand {};
+
+struct UnknownCommand {
+    std::string input;
+};
+
+using Command = std::variant<
+    HelpCommand,
+    ExitCommand,
+    VersionCommand,
+    ConfigCommand,
+    StateCommand,
+    PlanCommand,
+    ToolCommand,
+    ValidateCommand,
+    FinishCommand,
+    ResetCommand,
+    FailCommand,
+    UnknownCommand
+>;
+
+} // namespace corvus::commands

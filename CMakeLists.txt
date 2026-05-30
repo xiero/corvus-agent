@@ -26,6 +26,10 @@ FetchContent_MakeAvailable(ftxui)
 
 add_library(corvus_core
   src/core/AgentConfig.cpp
+  src/core/AgentState.cpp
+  src/core/AgentEvent.cpp
+  src/core/StateTransition.cpp
+  src/core/AgentRuntime.cpp
   src/commands/CommandParser.cpp
 )
 
@@ -119,4 +123,22 @@ if(BUILD_TESTING)
   )
 
   add_test(NAME CommandParserTests COMMAND corvus_command_parser_tests)
+
+  add_executable(corvus_agent_state_machine_tests
+    tests/AgentStateMachineTests.cpp
+  )
+
+  target_link_libraries(corvus_agent_state_machine_tests
+    PRIVATE
+      corvus_core
+  )
+
+  target_compile_options(corvus_agent_state_machine_tests
+    PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+  )
+
+  add_test(NAME AgentStateMachineTests COMMAND corvus_agent_state_machine_tests)
 endif()

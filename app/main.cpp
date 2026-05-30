@@ -1,12 +1,15 @@
 #include "commands/Command.hpp"
 #include "commands/CommandParser.hpp"
-#include "core/AgentConfig.hpp"
+#include "core/AgentEvent.hpp"
+#include "core/AgentRuntime.hpp"
+#include "core/AgentState.hpp"
 #include "tui/TuiApp.hpp"
 
 #include <iostream>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 
 namespace {
 
@@ -26,6 +29,13 @@ void printHelp(const corvus::core::AgentConfig& config) {
               << "  :help        Show commands\n"
               << "  :version     Show version information\n"
               << "  :config      Show runtime configuration\n"
+              << "  :state       Show current agent state\n"
+              << "  :plan        Move Idle -> Planning\n"
+              << "  :tool        Move Planning -> ToolExecution\n"
+              << "  :validate    Move ToolExecution -> Validation\n"
+              << "  :finish      Move Validation -> FinalResponse\n"
+              << "  :reset       Move FinalResponse/Error -> Idle\n"
+              << "  :fail        Move current state -> Error\n"
               << "  :exit        Exit the shell or TUI\n";
 }
 
@@ -38,22 +48,94 @@ void printShellHelp() {
               << "  :help\n"
               << "  :version\n"
               << "  :config\n"
+              << "  :state\n"
+              << "  :plan\n"
+              << "  :tool\n"
+              << "  :validate\n"
+              << "  :finish\n"
+              << "  :reset\n"
+              << "  :fail\n"
               << "  :exit\n";
 }
 
-void printConfig(const corvus::core::AgentConfig& config) {
+void printConfig(const corvus::core::AgentRuntime& runtime) {
+    const corvus::core::AgentConfig& config = runtime.config();
+
     std::cout << "Config:\n"
               << "  name: " << config.name() << "\n"
               << "  version: " << config.version() << "\n"
               << "  deterministicMode: "
               << (config.deterministicMode() ? "true" : "false") << "\n"
               << "  mentorMode: "
-              << (config.mentorMode() ? "true" : "false") << "\n";
+              << (config.mentorMode() ? "true" : "false") << "\n"
+              << "  state: " << corvus::core::toString(runtime.state()) << "\n";
+}
+
+[[nodiscard]] std::optional<corvus::core::AgentEvent> eventFromCommand(
+    const corvus::commands::Command& command
+) {
+    using namespace corvus::commands;
+
+    if (std::holds_alternative<PlanCommand>(command)) {
+        return corvus::core::AgentEvent{corvus::core::StartPlanning{}};
+    }
+
+    if (std::holds_alternative<ToolCommand>(command)) {
+        return corvus::core::AgentEvent{corvus::core::StartToolExecution{}};
+    }
+
+    if (std::holds_alternative<ValidateCommand>(command)) {
+        return corvus::core::AgentEvent{corvus::core::StartValidation{}};
+    }
+
+    if (std::holds_alternative<FinishCommand>(command)) {
+        return corvus::core::AgentEvent{corvus::core::Complete{}};
+    }
+
+    if (std::holds_alternative<ResetCommand>(command)) {
+        return corvus::core::AgentEvent{corvus::core::Reset{}};
+    }
+
+    if (std::holds_alternative<FailCommand>(command)) {
+        return corvus::core::AgentEvent{
+            corvus::core::Fail{"manual failure command"}
+        };
+    }
+
+    return std::nullopt;
+}
+
+bool handleStateCommand(
+    const corvus::commands::Command& command,
+    corvus::core::AgentRuntime& runtime
+) {
+    const std::optional<corvus::core::AgentEvent> event =
+        eventFromCommand(command);
+
+    if (!event.has_value()) {
+        return false;
+    }
+
+    const std::string eventDescription =
+        corvus::core::describeEvent(event.value());
+
+    const corvus::core::TransitionResult result =
+        runtime.dispatch(event.value());
+
+    if (result.succeeded()) {
+        std::cout << "Transition accepted: " << eventDescription << "\n"
+                  << "State: " << corvus::core::toString(runtime.state()) << "\n";
+        return true;
+    }
+
+    std::cout << "Transition denied: " << result.error.value() << "\n"
+              << "State: " << corvus::core::toString(runtime.state()) << "\n";
+    return true;
 }
 
 bool handleShellCommand(
     const corvus::commands::Command& command,
-    const corvus::core::AgentConfig& config
+    corvus::core::AgentRuntime& runtime
 ) {
     using namespace corvus::commands;
 
@@ -63,12 +145,21 @@ bool handleShellCommand(
     }
 
     if (std::holds_alternative<VersionCommand>(command)) {
-        printVersion(config);
+        printVersion(runtime.config());
         return true;
     }
 
     if (std::holds_alternative<ConfigCommand>(command)) {
-        printConfig(config);
+        printConfig(runtime);
+        return true;
+    }
+
+    if (std::holds_alternative<StateCommand>(command)) {
+        std::cout << "State: " << corvus::core::toString(runtime.state()) << "\n";
+        return true;
+    }
+
+    if (handleStateCommand(command, runtime)) {
         return true;
     }
 
@@ -83,7 +174,7 @@ bool handleShellCommand(
     return true;
 }
 
-void runShell(const corvus::core::AgentConfig& config) {
+void runShell(corvus::core::AgentRuntime runtime) {
     std::cout << "Corvus shell started.\n"
               << "Type :help for commands, :exit to quit.\n";
 
@@ -105,7 +196,7 @@ void runShell(const corvus::core::AgentConfig& config) {
             continue;
         }
 
-        shouldContinue = handleShellCommand(parsedCommand.value(), config);
+        shouldContinue = handleShellCommand(parsedCommand.value(), runtime);
     }
 }
 
@@ -132,7 +223,7 @@ int main(int argc, char** argv) {
     }
 
     if (argument == "--shell") {
-        runShell(config);
+        runShell(corvus::core::AgentRuntime{config});
         return 0;
     }
 
