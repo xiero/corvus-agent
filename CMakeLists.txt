@@ -31,6 +31,7 @@ add_library(corvus_core
   src/core/StateTransition.cpp
   src/core/AgentRuntime.cpp
   src/commands/CommandParser.cpp
+  src/commands/CommandExecutor.cpp
 )
 
 target_include_directories(corvus_core
@@ -70,14 +71,36 @@ target_compile_options(corvus_tui
     -Wpedantic
 )
 
+add_library(corvus_cli
+  src/cli/CliApp.cpp
+)
+
+target_include_directories(corvus_cli
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(corvus_cli
+  PUBLIC
+    corvus_core
+  PRIVATE
+    corvus_tui
+)
+
+target_compile_options(corvus_cli
+  PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
 add_executable(corvus
   app/main.cpp
 )
 
 target_link_libraries(corvus
   PRIVATE
-    corvus_core
-    corvus_tui
+    corvus_cli
 )
 
 target_compile_options(corvus
