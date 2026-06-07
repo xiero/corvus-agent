@@ -3,6 +3,8 @@
 #include "core/AgentEvent.hpp"
 #include "core/AgentState.hpp"
 #include "core/StateTransition.hpp"
+#include "tools/DefaultTools.hpp"
+#include "tools/Tool.hpp"
 
 #include <optional>
 #include <string>
@@ -14,10 +16,6 @@ namespace {
 [[nodiscard]] std::string boolToText(bool value) {
     return value ? "true" : "false";
 }
-
-// [[nodiscard]] std::string boolToStatus(bool value) {
-//     return value ? "ON" : "OFF";
-// }
 
 void appendHelp(CommandExecutionResult& result) {
     result.lines.push_back("Available commands:");
@@ -31,6 +29,10 @@ void appendHelp(CommandExecutionResult& result) {
     result.lines.push_back("  :finish");
     result.lines.push_back("  :reset");
     result.lines.push_back("  :fail");
+    result.lines.push_back("  :tool list");
+    result.lines.push_back("  :tool run echo message=hello");
+    result.lines.push_back("  :tool run list_files path=.");
+    result.lines.push_back("  :tool run read_file path=README.md");
     result.lines.push_back("  :exit");
 }
 
@@ -52,6 +54,60 @@ void appendConfig(
     result.lines.push_back(
         "  state: " + std::string{corvus::core::toString(runtime.state())}
     );
+}
+
+void appendToolList(
+    CommandExecutionResult& result,
+    const corvus::tools::ToolRegistry& registry
+) {
+    const std::vector<corvus::tools::ToolMetadata> tools =
+        registry.listTools();
+
+    result.lines.push_back("Available tools:");
+
+    if (tools.empty()) {
+        result.lines.push_back("  (none)");
+        return;
+    }
+
+    for (const corvus::tools::ToolMetadata& tool : tools) {
+        result.lines.push_back(
+            "  " + tool.name + " - " + tool.description
+        );
+    }
+}
+
+void appendToolRun(
+    CommandExecutionResult& result,
+    const ToolRunCommand& command,
+    const corvus::tools::ToolRegistry& registry,
+    const corvus::core::AgentRuntime& runtime
+) {
+    if (runtime.state() != corvus::core::AgentState::ToolExecution) {
+        result.lines.push_back(
+            "Tool run denied: current state is "
+                + std::string{corvus::core::toString(runtime.state())}
+        );
+        result.lines.push_back(
+            "Use :plan and :tool before running tools."
+        );
+        return;
+    }
+
+    corvus::tools::ToolInput input;
+    input.arguments = command.arguments;
+
+    const corvus::tools::ToolResult toolResult =
+        registry.run(command.toolName, input);
+
+    result.lines.push_back("Tool: " + command.toolName);
+    result.lines.push_back(
+        toolResult.succeeded ? "Status: succeeded" : "Status: failed"
+    );
+
+    for (const std::string& line : toolResult.lines) {
+        result.lines.push_back(line);
+    }
 }
 
 [[nodiscard]] std::optional<corvus::core::AgentEvent> eventFromCommand(
@@ -123,6 +179,9 @@ void appendConfig(
 
 } // namespace
 
+CommandExecutor::CommandExecutor()
+    : toolRegistry_{corvus::tools::createDefaultToolRegistry()} {}
+
 CommandExecutionResult CommandExecutor::execute(
     const Command& command,
     corvus::core::AgentRuntime& runtime
@@ -149,6 +208,21 @@ CommandExecutionResult CommandExecutor::execute(
     if (std::holds_alternative<StateCommand>(command)) {
         result.lines.push_back(
             "State: " + std::string{corvus::core::toString(runtime.state())}
+        );
+        return result;
+    }
+
+    if (std::holds_alternative<ToolListCommand>(command)) {
+        appendToolList(result, toolRegistry_);
+        return result;
+    }
+
+    if (std::holds_alternative<ToolRunCommand>(command)) {
+        appendToolRun(
+            result,
+            std::get<ToolRunCommand>(command),
+            toolRegistry_,
+            runtime
         );
         return result;
     }

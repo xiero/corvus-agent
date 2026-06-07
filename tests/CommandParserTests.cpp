@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 
 namespace {
@@ -59,13 +60,58 @@ void testKnownCommands() {
     requireParsesAs<FailCommand>(":fail", ":fail");
 }
 
+void testToolListCommand() {
+    requireParsesAs<corvus::commands::ToolListCommand>(
+        ":tool list",
+        ":tool list"
+    );
+}
+
+void testToolRunCommand() {
+    const std::optional<corvus::commands::Command> command =
+        corvus::commands::parseCommand(
+            ":tool run echo message=hello mode=test"
+        );
+
+    require(command.has_value(), ":tool run should produce a command");
+    require(
+        std::holds_alternative<corvus::commands::ToolRunCommand>(
+            command.value()
+        ),
+        ":tool run should produce ToolRunCommand"
+    );
+
+    const auto& toolRun =
+        std::get<corvus::commands::ToolRunCommand>(command.value());
+
+    require(toolRun.toolName == "echo", "tool name should be parsed");
+    require(
+        toolRun.arguments.count("message") == 1,
+        "message argument should exist"
+    );
+    require(
+        toolRun.arguments.at("message") == "hello",
+        "message argument should be parsed"
+    );
+    require(
+        toolRun.arguments.count("mode") == 1,
+        "mode argument should exist"
+    );
+    require(
+        toolRun.arguments.at("mode") == "test",
+        "mode argument should be parsed"
+    );
+}
+
 void testUnknownCommand() {
     const std::optional<corvus::commands::Command> command =
         corvus::commands::parseCommand(":dance");
 
     require(command.has_value(), "unknown input should still produce a command");
     require(
-        std::holds_alternative<corvus::commands::UnknownCommand>(command.value()),
+        std::holds_alternative<corvus::commands::UnknownCommand>(
+            command.value()
+        ),
         "unknown input should produce UnknownCommand"
     );
 
@@ -81,6 +127,8 @@ int main() {
     testEmptyInputProducesNoCommand();
     testWhitespaceInputProducesNoCommand();
     testKnownCommands();
+    testToolListCommand();
+    testToolRunCommand();
     testUnknownCommand();
 
     std::cout << "CommandParserTests passed\n";

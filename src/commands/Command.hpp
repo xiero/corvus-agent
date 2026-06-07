@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <variant>
 
@@ -18,6 +19,13 @@ struct FinishCommand {};
 struct ResetCommand {};
 struct FailCommand {};
 
+struct ToolListCommand {};
+
+struct ToolRunCommand {
+    std::string toolName;
+    std::map<std::string, std::string> arguments;
+};
+
 struct UnknownCommand {
     std::string input;
 };
@@ -34,6 +42,8 @@ using Command = std::variant<
     FinishCommand,
     ResetCommand,
     FailCommand,
+    ToolListCommand,
+    ToolRunCommand,
     UnknownCommand
 >;
 

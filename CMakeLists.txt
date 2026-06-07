@@ -32,6 +32,11 @@ add_library(corvus_core
   src/core/AgentRuntime.cpp
   src/commands/CommandParser.cpp
   src/commands/CommandExecutor.cpp
+  src/tools/ToolRegistry.cpp
+  src/tools/EchoTool.cpp
+  src/tools/ListFilesTool.cpp
+  src/tools/ReadFileTool.cpp
+  src/tools/DefaultTools.cpp
 )
 
 target_include_directories(corvus_core
@@ -164,4 +169,22 @@ if(BUILD_TESTING)
   )
 
   add_test(NAME AgentStateMachineTests COMMAND corvus_agent_state_machine_tests)
+
+  add_executable(corvus_tool_registry_tests
+    tests/ToolRegistryTests.cpp
+  )
+
+  target_link_libraries(corvus_tool_registry_tests
+    PRIVATE
+      corvus_core
+  )
+
+  target_compile_options(corvus_tool_registry_tests
+    PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+  )
+
+  add_test(NAME ToolRegistryTests COMMAND corvus_tool_registry_tests)
 endif()

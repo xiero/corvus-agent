@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace corvus::cli {
 namespace {
@@ -27,17 +28,21 @@ void printHelp(const corvus::core::AgentConfig& config) {
               << "  --shell      Start the interactive Corvus shell\n"
               << "  --tui        Start the interactive Corvus TUI cockpit\n\n"
               << "Shell / TUI commands:\n"
-              << "  :help        Show commands\n"
-              << "  :version     Show version information\n"
-              << "  :config      Show runtime configuration\n"
-              << "  :state       Show current agent state\n"
-              << "  :plan        Move Idle -> Planning\n"
-              << "  :tool        Move Planning -> ToolExecution\n"
-              << "  :validate    Move ToolExecution -> Validation\n"
-              << "  :finish      Move Validation -> FinalResponse\n"
-              << "  :reset       Move FinalResponse/Error -> Idle\n"
-              << "  :fail        Move current state -> Error\n"
-              << "  :exit        Exit the shell or TUI\n";
+              << "  :help                              Show commands\n"
+              << "  :version                           Show version information\n"
+              << "  :config                            Show runtime configuration\n"
+              << "  :state                             Show current agent state\n"
+              << "  :plan                              Move Idle -> Planning\n"
+              << "  :tool                              Move Planning -> ToolExecution\n"
+              << "  :validate                          Move ToolExecution -> Validation\n"
+              << "  :finish                            Move Validation -> FinalResponse\n"
+              << "  :reset                             Move FinalResponse/Error -> Idle\n"
+              << "  :fail                              Move current state -> Error\n"
+              << "  :tool list                         List registered tools\n"
+              << "  :tool run echo message=hello       Run echo tool\n"
+              << "  :tool run list_files path=.        List directory entries\n"
+              << "  :tool run read_file path=README.md Read a text file\n"
+              << "  :exit                              Exit the shell or TUI\n";
 }
 
 void printVersion(const corvus::core::AgentConfig& config) {
