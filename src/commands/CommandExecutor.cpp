@@ -3,6 +3,7 @@
 #include "core/AgentEvent.hpp"
 #include "core/AgentState.hpp"
 #include "core/StateTransition.hpp"
+#include "safety/SafetyPolicy.hpp"
 #include "tools/DefaultTools.hpp"
 #include "tools/Tool.hpp"
 
@@ -77,10 +78,37 @@ void appendToolList(
     }
 }
 
+[[nodiscard]] corvus::safety::ToolCall toolCallFromCommand(
+    const ToolRunCommand& command
+) {
+    return corvus::safety::ToolCall{
+        .toolName = command.toolName,
+        .arguments = command.arguments,
+    };
+}
+
+void appendSafetyEvaluation(
+    CommandExecutionResult& result,
+    const corvus::safety::SafetyEvaluation& evaluation
+) {
+    result.lines.push_back(
+        "Safety: "
+            + std::string{corvus::safety::toString(evaluation.decision)}
+            + " (risk: "
+            + std::string{corvus::safety::toString(evaluation.risk)}
+            + ")"
+    );
+
+    if (evaluation.reason.has_value()) {
+        result.lines.push_back("Reason: " + evaluation.reason.value());
+    }
+}
+
 void appendToolRun(
     CommandExecutionResult& result,
     const ToolRunCommand& command,
     const corvus::tools::ToolRegistry& registry,
+    const corvus::safety::SafetyEngine& safetyEngine,
     const corvus::core::AgentRuntime& runtime
 ) {
     if (runtime.state() != corvus::core::AgentState::ToolExecution) {
@@ -90,6 +118,26 @@ void appendToolRun(
         );
         result.lines.push_back(
             "Use :plan and :tool before running tools."
+        );
+        return;
+    }
+
+    const corvus::safety::ToolCall toolCall =
+        toolCallFromCommand(command);
+
+    const corvus::safety::SafetyEvaluation safetyEvaluation =
+        safetyEngine.evaluate(toolCall);
+
+    appendSafetyEvaluation(result, safetyEvaluation);
+
+    if (safetyEvaluation.denied()) {
+        result.lines.push_back("Tool execution blocked by safety engine.");
+        return;
+    }
+
+    if (safetyEvaluation.needsConfirmation()) {
+        result.lines.push_back(
+            "Tool execution paused: confirmation flow is not implemented yet."
         );
         return;
     }
@@ -180,7 +228,8 @@ void appendToolRun(
 } // namespace
 
 CommandExecutor::CommandExecutor()
-    : toolRegistry_{corvus::tools::createDefaultToolRegistry()} {}
+    : toolRegistry_{corvus::tools::createDefaultToolRegistry()},
+      safetyEngine_{corvus::safety::SafetyEngine{}} {}
 
 CommandExecutionResult CommandExecutor::execute(
     const Command& command,
@@ -222,6 +271,7 @@ CommandExecutionResult CommandExecutor::execute(
             result,
             std::get<ToolRunCommand>(command),
             toolRegistry_,
+            safetyEngine_,
             runtime
         );
         return result;

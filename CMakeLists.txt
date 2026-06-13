@@ -37,6 +37,9 @@ add_library(corvus_core
   src/tools/ListFilesTool.cpp
   src/tools/ReadFileTool.cpp
   src/tools/DefaultTools.cpp
+  src/safety/RiskLevel.cpp
+  src/safety/SafetyPolicy.cpp
+  src/safety/SafetyEngine.cpp
 )
 
 target_include_directories(corvus_core
@@ -187,4 +190,22 @@ if(BUILD_TESTING)
   )
 
   add_test(NAME ToolRegistryTests COMMAND corvus_tool_registry_tests)
+
+  add_executable(corvus_safety_engine_tests
+    tests/SafetyEngineTests.cpp
+  )
+
+  target_link_libraries(corvus_safety_engine_tests
+    PRIVATE
+      corvus_core
+  )
+
+  target_compile_options(corvus_safety_engine_tests
+    PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+  )
+
+  add_test(NAME SafetyEngineTests COMMAND corvus_safety_engine_tests)
 endif()

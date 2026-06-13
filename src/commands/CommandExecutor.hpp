@@ -2,6 +2,7 @@
 
 #include "commands/Command.hpp"
 #include "core/AgentRuntime.hpp"
+#include "safety/SafetyEngine.hpp"
 #include "tools/ToolRegistry.hpp"
 
 #include <string>
@@ -25,6 +26,7 @@ public:
 
 private:
     corvus::tools::ToolRegistry toolRegistry_;
+    corvus::safety::SafetyEngine safetyEngine_;
 };
 
 } // namespace corvus::commands
