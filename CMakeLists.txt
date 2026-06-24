@@ -40,6 +40,9 @@ add_library(corvus_core
   src/safety/RiskLevel.cpp
   src/safety/SafetyPolicy.cpp
   src/safety/SafetyEngine.cpp
+  src/audit/AuditEvent.cpp
+  src/audit/AuditLog.cpp
+  src/audit/AuditLogFactory.cpp
 )
 
 target_include_directories(corvus_core
@@ -208,4 +211,22 @@ if(BUILD_TESTING)
   )
 
   add_test(NAME SafetyEngineTests COMMAND corvus_safety_engine_tests)
+
+  add_executable(corvus_audit_log_tests
+    tests/AuditLogTests.cpp
+  )
+
+  target_link_libraries(corvus_audit_log_tests
+    PRIVATE
+      corvus_core
+  )
+
+  target_compile_options(corvus_audit_log_tests
+    PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+  )
+
+  add_test(NAME AuditLogTests COMMAND corvus_audit_log_tests)
 endif()

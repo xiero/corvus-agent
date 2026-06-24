@@ -15,18 +15,26 @@
 namespace corvus::cli {
 namespace {
 
+struct CliOptions {
+    corvus::core::AgentConfig config;
+    std::optional<std::string> mode;
+};
+
 void printHelp(const corvus::core::AgentConfig& config) {
     std::cout << config.name() << "\n\n"
               << "Usage:\n"
               << "  corvus --help\n"
               << "  corvus --version\n"
               << "  corvus --shell\n"
-              << "  corvus --tui\n\n"
+              << "  corvus --tui\n"
+              << "  corvus --deterministic --shell\n"
+              << "  corvus --deterministic --tui\n\n"
               << "Options:\n"
-              << "  --help       Show this help message\n"
-              << "  --version    Show version information\n"
-              << "  --shell      Start the interactive Corvus shell\n"
-              << "  --tui        Start the interactive Corvus TUI cockpit\n\n"
+              << "  --help             Show this help message\n"
+              << "  --version          Show version information\n"
+              << "  --shell            Start the interactive Corvus shell\n"
+              << "  --tui              Start the interactive Corvus TUI cockpit\n"
+              << "  --deterministic    Enable audit logging for the session\n\n"
               << "Shell / TUI commands:\n"
               << "  :help                              Show commands\n"
               << "  :version                           Show version information\n"
@@ -55,11 +63,40 @@ void printLines(const std::vector<std::string>& lines) {
     }
 }
 
+[[nodiscard]] CliOptions parseCliOptions(int argc, char** argv) {
+    CliOptions options;
+
+    for (int index = 1; index < argc; ++index) {
+        const std::string_view argument{argv[index]};
+
+        if (argument == "--deterministic") {
+            options.config.setDeterministicMode(true);
+            continue;
+        }
+
+        if (!options.mode.has_value()) {
+            options.mode = std::string{argument};
+            continue;
+        }
+
+        options.mode = "__unknown__";
+        return options;
+    }
+
+    return options;
+}
+
 void runShell(corvus::core::AgentRuntime runtime) {
-    const corvus::commands::CommandExecutor executor;
+    const corvus::commands::CommandExecutor executor{runtime.config()};
+    executor.recordSessionStarted("shell");
 
     std::cout << "Corvus shell started.\n"
               << "Type :help for commands, :exit to quit.\n";
+
+    if (runtime.config().deterministicMode()) {
+        std::cout << "Deterministic mode: ON\n"
+                  << "Audit log: .corvus/audit/latest.jsonl\n";
+    }
 
     std::string line;
     bool shouldContinue = true;
@@ -86,42 +123,45 @@ void runShell(corvus::core::AgentRuntime runtime) {
 
         shouldContinue = !result.shouldExit;
     }
+
+    executor.recordSessionEnded("shell");
 }
 
 } // namespace
 
 int CliApp::run(int argc, char** argv) const {
-    const corvus::core::AgentConfig config;
+    const CliOptions options = parseCliOptions(argc, argv);
+    const corvus::core::AgentConfig& config = options.config;
 
-    if (argc == 1) {
+    if (!options.mode.has_value()) {
         printHelp(config);
         return 0;
     }
 
-    const std::string_view argument{argv[1]};
+    const std::string& mode = options.mode.value();
 
-    if (argument == "--help" || argument == "-h") {
+    if (mode == "--help" || mode == "-h") {
         printHelp(config);
         return 0;
     }
 
-    if (argument == "--version" || argument == "-v") {
+    if (mode == "--version" || mode == "-v") {
         printVersion(config);
         return 0;
     }
 
-    if (argument == "--shell") {
+    if (mode == "--shell") {
         runShell(corvus::core::AgentRuntime{config});
         return 0;
     }
 
-    if (argument == "--tui") {
+    if (mode == "--tui") {
         corvus::tui::TuiApp app{config};
         app.run();
         return 0;
     }
 
-    std::cerr << "Unknown argument: " << argument << "\n"
+    std::cerr << "Unknown argument: " << mode << "\n"
               << "Run `corvus --help` for usage.\n";
     return 1;
 }

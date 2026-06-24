@@ -9,12 +9,12 @@
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-#include <functional>
 
 namespace corvus::tui {
 namespace {
@@ -127,7 +127,13 @@ void TuiApp::run() {
         "Type :help for commands, :exit to quit.",
     };
 
-    const corvus::commands::CommandExecutor executor;
+    if (runtime_.config().deterministicMode()) {
+        logLines.push_back("Deterministic mode: ON");
+        logLines.push_back("Audit log: .corvus/audit/latest.jsonl");
+    }
+
+    const corvus::commands::CommandExecutor executor{runtime_.config()};
+    executor.recordSessionStarted("tui");
 
     auto inputComponent = Input(&input, "type :help and press Enter");
     auto quit = screen.ExitLoopClosure();
@@ -166,6 +172,8 @@ void TuiApp::run() {
     });
 
     screen.Loop(renderer);
+
+    executor.recordSessionEnded("tui");
 }
 
 } // namespace corvus::tui
