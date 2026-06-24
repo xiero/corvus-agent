@@ -43,6 +43,7 @@ add_library(corvus_core
   src/audit/AuditEvent.cpp
   src/audit/AuditLog.cpp
   src/audit/AuditLogFactory.cpp
+  src/project/ProjectScanner.cpp
 )
 
 target_include_directories(corvus_core
@@ -229,4 +230,22 @@ if(BUILD_TESTING)
   )
 
   add_test(NAME AuditLogTests COMMAND corvus_audit_log_tests)
+
+    add_executable(corvus_project_scanner_tests
+    tests/ProjectScannerTests.cpp
+  )
+
+  target_link_libraries(corvus_project_scanner_tests
+    PRIVATE
+      corvus_core
+  )
+
+  target_compile_options(corvus_project_scanner_tests
+    PRIVATE
+      -Wall
+      -Wextra
+      -Wpedantic
+  )
+
+  add_test(NAME ProjectScannerTests COMMAND corvus_project_scanner_tests)
 endif()
